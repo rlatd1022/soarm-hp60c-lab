@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# 가상환경
+.venv/
+venv/
+env/
+
+# 로봇 개체별 보정값 (각자 캘리브 — 공유/커밋 금지)
+data/calibration.json
+data/
+
+# 로컬 설정·비밀
+.env
+.env.*
+*.local
+
+# 에디터 · OS
+.vscode/
+.idea/
+.DS_Store
+
+# test
+my_*
