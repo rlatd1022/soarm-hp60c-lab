@@ -9,14 +9,14 @@ python vision/02_detect.py        # 예시
 
 ## 진행 순서
 
-| 순서 | 파일 | 하는 일 | 빈칸(TODO) |
-|---|---|---|---|
-| 1 | `01_capture.py` | 공 사진을 shots/ 에 저장 | ① `save_shot()` — 파일 저장 한 줄 |
-| 2 | `hsv_tuner.py` | 슬라이더로 공 색 HSV 범위 찾기 (완성본, p=값 출력) | — |
-| 3 | `02_detect.py` | HSV로 빨강/파랑 공 검출 | ① 빨강 LO/HI 값 채우기 · ② BGR→HSV 변환 |
-| 4 | `03_map.py` | 4점 캘리브레이션 → `data/H.npy` (강사와 함께, 완성본) | — |
-| 5 | `04_click_move.py` | 클릭한 곳으로 로봇 이동 | ① `pixel_to_robot()` — 픽셀→로봇 변환 · ②(심화) 어긋남 원인 조사 |
-| 6 | `05_track.py` | 빨간 공 실시간 추적 | ① `far_enough()` — 데드밴드 판정 |
+| 순서 | 파일 | 하는 일 |
+|---|---|---|
+| 1 | `01_capture.py` | 공 사진을 shots/ 에 저장 |
+| 2 | `hsv_tuner.py` | 슬라이더로 공 색 HSV 범위 찾기 (완성본, p=값 출력) |
+| 3 | `02_detect.py` | HSV로 빨강/파랑 공 검출 |
+| 4 | `03_map.py` | 4점 캘리브레이션 → `data/H.npy` (강사와 함께, 완성본) |
+| 5 | `04_click_move.py` | 클릭한 곳으로 로봇 이동 |
+| 6 | `05_track.py` | 빨간 공 실시간 추적 |
 
 ## TODO 사용법
 
