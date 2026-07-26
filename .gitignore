@@ -2,13 +2,19 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.eggs/
 build/
 dist/
+.venv/
+venv/
 
 # 가상환경
 .venv/
 venv/
 env/
+
+# CMake
+bridge/build/
 
 # 로봇 개체별 보정값 (각자 캘리브 — 공유/커밋 금지)
 data/calibration.json
@@ -26,3 +32,8 @@ data/
 
 # test
 my_*
+
+# Editors
+.vscode/
+.idea/
+*.swp
