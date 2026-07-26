@@ -1,41 +1,49 @@
-# soarm_lab — SO-ARM101 실습 제공물
+# SO-ARM101 비전 실습 (학생 배포본)
 
-MuJoCo 시뮬레이션과 실물 SO-ARM101 제어 실습용 패키지입니다.
-학생은 안을 몰라도 됩니다. `arm` 하나로 시작하고, 필요할 때 열어 봅니다.
+카메라(HP60C)로 공을 찾아 로봇 좌표로 바꾸고, 로봇이 그 자리로 가게 만드는 실습입니다.
+**핵심은 직접 만듭니다.** 카메라·로봇 라이브러리와 어려운 배관(4점 캘리브)은 제공되고,
+검출·좌표활용·트래킹은 여러분이 (필요하면 AI를 활용해) 만들되 **각 부분을 설명할 수 있어야** 합니다.
 
-## 설치
-```bash
-pip install mujoco numpy      # 시뮬
-pip install pyserial          # 실물(driver_sdk)까지 쓸 때
-```
-
-## 사용
-작업 폴더에 이 `soarm_provided` 폴더를 두고, 스크립트 맨 위에서 경로를 얹습니다.
-```python
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "soarm_provided"))
-
-from soarm_lab import arm, SCENE
-
-arm.live()                              # 라이브 뷰어 창
-arm.go([0.25, 0.0, 0.15])               # 손끝을 그 좌표로 (시뮬)
-arm.go([0.25, 0.0, 0.15], real=True)    # 같은 좌표를 실물로
-arm.wait()
-```
-
-## 구성 (`soarm_lab/`)
-| 파일 | 역할 |
+## 제공 vs 직접
+| | 내용 |
 |---|---|
-| `arm.py` | 제어 진입점 — `arm.go` / `run` / `grip` / `grasp` / `ball_xy` / `live` / `wait` |
-| `ik_core.py` | 역기구학 (DLS) — 좌표 → 관절각 |
-| `fk_core.py` | 순기구학 (POE) — 관절각 → 위치 |
-| `sim.py` | MuJoCo 시뮬 백엔드 |
-| `real.py` | 실물 백엔드 (시리얼 직결) |
-| `driver_sdk.py` | STS3215 서보 드라이버 |
-| `grasp.py` | 파지 접근점 계산 (`approach_xy`) |
-| `grasp_scene.py` | 파지 씬 빌더 (공 + 바구니 + 물리) |
-| `models/` | 공식 SO-101 모델 (scene.xml + 메시) |
+| **제공** | `hp60c-camera/`(카메라) · `soarm_lab/`(로봇) · `vision/03_map.py`(4점 호모그래피) |
+| **직접** | `vision/01_capture` · `02_detect` · `04_click_move` · `05_track` · `06_collect` (스캐폴드에 요구사항·힌트) |
 
-실행 예제는 `examples/pick_place.py` (좌표함수 pick & place).
+## 셋업 (최초 1회)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 
-모델 출처: [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100) — Simulation/SO101
+cd hp60c-camera && pip install -e ".[examples]"   # ① 카메라 리더 + opencv
+cd ..            && pip install -e .              # ② soarm_lab (+ numpy·pyserial·mujoco)
+```
+- 새 컴퓨터면 ②에서 mujoco 다운로드로 몇 분 걸릴 수 있습니다(한 번만).
+- 브리지 빌드가 필요하면: `cd hp60c-camera/bridge && rm -rf build && ./build.sh`
+
+## 매번 실습할 때
+```bash
+source .venv/bin/activate
+./hp60c-camera/scripts/start_bridge.sh     # 카메라 브리지('Streaming started')
+# ↑ 켜두고, 새 터미널(venv 다시 activate)에서 아래 실행
+cd vision
+python 01_capture.py     # 공 사진        (카메라만)
+python 02_detect.py      # HSV 검출        (카메라만 / 사진만도 가능)
+python 03_map.py         # 4점 → data/H.npy (카메라 + 로봇, 제공됨)
+python 04_click_move.py  # 클릭 → 이동      (카메라 + 로봇 + H.npy)
+python 05_track.py       # 트래킹          (카메라 + 로봇 + H.npy)
+```
+
+| 스크립트 | 카메라 | 로봇 | H.npy |
+|---|:---:|:---:|:---:|
+| 01·02·06 | ✅ | — | — |
+| 03_map | ✅ | ✅ | (생성) |
+| 04·05 | ✅ | ✅ | ✅ 필요 |
+
+## 흐름 한눈에
+`공 사진(01)` → `HSV로 공의 픽셀(02)` → `4점 호모그래피로 H(03)` → `픽셀→로봇좌표로 이동(04)` → `트래킹(05)`
+
+HSV 임계값 6개는 강사의 `hsv_tuner` 시연으로 뽑아 `02_detect` 등의 값에 넣습니다.
+
+## 안전
+로봇이 움직이는 03·04·05 는 **작업면에 손을 넣지 말 것.** 처음엔 `REAL=False`(시뮬)로 확인한 뒤 실물로.

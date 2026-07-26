@@ -37,3 +37,9 @@ my_*
 .vscode/
 .idea/
 *.swp
+
+# 비전 실습 런타임 산출물(학생 각자 생성)
+vision/shots/
+vision/collected/
+vision/data/
+vision/**/__pycache__/
