@@ -1,14 +1,8 @@
 # -*- coding: utf-8 -*-
-"""01_capture.py — 공 사진 저장 (직접 작성 · 강사와 같이 따라치기).
+"""01_capture.py — 공 사진 저장 (HSV 개발용 데이터 모으기).
 
-목표: 브리지를 켠 뒤 카메라 화면을 보며 s 로 shots/ 에 사진을 저장한다.
-      빨강·파랑·조명별로 몇 장 찍어두면 다음(02·hsv)에서 임계값 맞추기 쉽다.
-
-힌트:
-  from hp60c_camera import CameraReader
-  with CameraReader() as cam:
-      rgb, depth, last = cam.read_blocking(last)   # rgb = BGR uint8
-  cv2.imshow(...) / cv2.waitKey(1) / cv2.imwrite(path, rgb)
+브리지를 켠 뒤 실행. 화면을 보며 s 로 저장하면 shots/ 에 쌓인다.
+빨강·파랑·조명별로 몇 장씩 찍어두면 다음(02_detect)에서 HSV 임계값 맞추기 쉽다.
 키: s=저장 · q=종료
 """
 import os
@@ -21,12 +15,24 @@ OUT = "shots"
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    # TODO (구현 순서):
-    #  1) with CameraReader() as cam:  루프에서 rgb, _d, last = cam.read_blocking(last)
-    #  2) cv2.imshow 로 rgb 표시, k = cv2.waitKey(1) & 0xFF
-    #  3) k == ord('s') 이면 cv2.imwrite(f"{OUT}/shot_{n:03d}.png", rgb) 후 번호 증가
-    #  4) k == ord('q') 이면 종료
-    raise NotImplementedError("위 순서로 캡처 루프를 구현하세요")
+    n = len([f for f in os.listdir(OUT) if f.endswith(".png")])
+    print("s=저장, q=종료")
+    with CameraReader() as cam:
+        last = 0
+        while True:
+            rgb, _depth, last = cam.read_blocking(last)
+            if rgb is None:
+                continue
+            cv2.imshow("capture (s=save, q=quit)", rgb)
+            k = cv2.waitKey(1) & 0xFF
+            if k == ord("s"):
+                path = os.path.join(OUT, f"shot_{n:03d}.png")
+                cv2.imwrite(path, rgb)
+                print("저장:", path)
+                n += 1
+            elif k == ord("q"):
+                break
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
