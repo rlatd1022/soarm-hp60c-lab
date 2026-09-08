@@ -36,12 +36,18 @@
 #include "as_camera_sdk_api.h"
 #include "as_camera_sdk_def.h"
 
+// Not in public headers; used by HP60C setGain (XU unit 0x47).
+extern int AS_SDK_Xu_CustomWrite(AS_CAM_PTR pCamera, unsigned char unit,
+                                 unsigned char *data, unsigned int size, int timeout);
+
 #define SHM_NAME        "/hp60c_frames"
 #define HEADER_SIZE     64
 #define MAX_RGB_SIZE    (1920 * 1080 * 3)
 #define MAX_DEPTH_SIZE  (640 * 480 * 2)
 #define SHM_TOTAL_SIZE  (HEADER_SIZE + MAX_RGB_SIZE + MAX_DEPTH_SIZE)
 #define SHM_MAGIC       0x48503630u  // "HP60"
+#define HP60C_XU_GAIN   0x47
+#define DEFAULT_GAIN    12  // config default is 4; range 1..28
 
 struct ShmHeader {
     uint32_t magic;
@@ -54,11 +60,49 @@ struct ShmHeader {
     uint32_t depth_ready;
 };
 
+// HP60C XuCmdCameraHp60c::setGain lookup (gain 1..28 → R2=3e08 / 3e09)
+static const uint8_t kHp60cGainTable[28][2] = {
+    {0x03, 0x20}, {0x23, 0x24}, {0x23, 0x35}, {0x27, 0x24},
+    {0x27, 0x2d}, {0x27, 0x35}, {0x27, 0x3e}, {0x2f, 0x24},
+    {0x2f, 0x28}, {0x2f, 0x2d}, {0x2f, 0x31}, {0x2f, 0x35},
+    {0x2f, 0x3a}, {0x2f, 0x3e}, {0x3f, 0x22}, {0x3f, 0x24},
+    {0x3f, 0x26}, {0x3f, 0x28}, {0x3f, 0x2a}, {0x3f, 0x2d},
+    {0x3f, 0x2f}, {0x3f, 0x31}, {0x3f, 0x33}, {0x3f, 0x35},
+    {0x3f, 0x38}, {0x3f, 0x3a}, {0x3f, 0x3c}, {0x3f, 0x3e},
+};
+
 static std::atomic<bool> g_running{true};
 static uint8_t* g_shm_ptr = nullptr;
 static uint64_t g_frame_id = 0;
 static AS_CAM_PTR g_camera = nullptr;
 static std::string g_config_dir;
+
+static int applyHp60cGain(AS_CAM_PTR cam, int gain) {
+    if (gain < 1 || gain > 28) {
+        fprintf(stderr, "[shm_bridge] gain %d out of range 1..28\n", gain);
+        return -1;
+    }
+    const uint8_t* pair = kHp60cGainTable[gain - 1];
+    char cmd[64];
+    int n = snprintf(cmd, sizeof(cmd), "S=C0,R2=3e08,D=%02x", pair[0]);
+    int r1 = AS_SDK_Xu_CustomWrite(cam, HP60C_XU_GAIN,
+                                   reinterpret_cast<unsigned char*>(cmd),
+                                   static_cast<unsigned int>(n + 1), 1000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    n = snprintf(cmd, sizeof(cmd), "S=C0,R2=3e09,D=%02x", pair[1]);
+    int r2 = AS_SDK_Xu_CustomWrite(cam, HP60C_XU_GAIN,
+                                   reinterpret_cast<unsigned char*>(cmd),
+                                   static_cast<unsigned int>(n + 1), 1000);
+    printf("[shm_bridge] set gain %d (xu ret %d/%d)\n", gain, r1, r2);
+    return (r1 < 0 || r2 < 0) ? -1 : 0;
+}
+
+// Config applies gain=4 shortly after StartStream; override after that settles.
+static void gainOverrideThread(AS_CAM_PTR cam, int gain) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+    if (!g_running || g_camera != cam) return;
+    applyHp60cGain(cam, gain);
+}
 
 static void signal_handler(int) { g_running = false; }
 
@@ -175,6 +219,13 @@ static void onAttached(AS_CAM_ATTR_S* attr, void* /*priv*/) {
 
     g_camera = cam;
     printf("[shm_bridge] Streaming started.\n");
+
+    int gain = DEFAULT_GAIN;
+    if (const char* env = std::getenv("HP60C_GAIN")) {
+        int g = atoi(env);
+        if (g >= 1 && g <= 28) gain = g;
+    }
+    std::thread(gainOverrideThread, cam, gain).detach();
 }
 
 static void onDetached(AS_CAM_ATTR_S* /*attr*/, void* /*priv*/) {

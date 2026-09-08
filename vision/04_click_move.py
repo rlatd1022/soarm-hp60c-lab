@@ -21,7 +21,7 @@ from soarm_lab import arm
 Z_FIXED = 0.12          # 유지할 손끝 높이(m)
 SPEED = 600             # 실물 서보 속도(1~4095, 작을수록 느림 · 0=최대)
 ACC = 20                # 실물 가감속(0~254, 작을수록 부드럽게)
-REAL = False            # 시뮬 확인은 False, 실물은 True
+REAL = True             # 시뮬 확인은 False, 실물은 True
 
 
 def pixel_to_robot(u, v, H):
@@ -31,7 +31,8 @@ def pixel_to_robot(u, v, H):
     # 키워드: cv2.perspectiveTransform, np.float32([[[u, v]]]),  결과[0, 0]
     # 참고  : H 는 03_map 이 만든 "픽셀→로봇" 3x3 행렬. 점 하나도 [[[u,v]]]
     #         3겹 배열로 감싸서 넣어야 한다(함수가 점들의 배열을 기대).
-    return None
+    x, y = cv2.perspectiveTransform(np.float32([[[u, v]]]), H)[0, 0]
+    return float(x), float(y)
     # ──────────────────────────────────────────────────────────────────────
 
 

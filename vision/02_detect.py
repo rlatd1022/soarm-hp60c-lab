@@ -18,8 +18,9 @@ import cv2
 # 키워드: hsv_tuner.py, p 키, (Hmin, Smin, Vmin) / (Hmax, Smax, Vmax)
 # 참고  : 빨강을 Hmin>Hmax 로 감싸 잡았어도 그대로 적으면 된다(코드가 두 구간 OR).
 #         형식 예) 초록 공이라면:  LO = (40, 80, 60) / HI = (85, 255, 255)
-RED_LO = None
-RED_HI = None
+# 핑크/마젠타 공 — 조명 변동 대비 S/V 완화, H는 파란 오검출 피하려고 145+
+RED_LO = (145, 50, 40)
+RED_HI = (179, 255, 255)
 # ──────────────────────────────────────────────────────────────────────────
 
 # 파랑은 제공값 — 시간이 남으면 hsv_tuner 로 직접 다시 구해 바꿔 본다(심화)
@@ -33,12 +34,8 @@ def color_mask(bgr, lo, hi):
     """HSV 범위 [lo, hi] → 흑백 마스크(공=흰색).
     Hmin>Hmax 면 색상환 양끝을 감싼 것으로 보고 [lo~179] + [0~hi] 를 합친다(빨강용)."""
     # ── TODO ②: BGR → HSV 변환 ────────────────────────────────────────────
-    # 할 일 : 카메라 이미지(bgr, BGR 색공간)를 HSV 로 변환해 hsv 에 담는다.
-    # 키워드: cv2.cvtColor, cv2.COLOR_BGR2HSV
-    hsv = None
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     # ──────────────────────────────────────────────────────────────────────
-    if hsv is None:
-        raise SystemExit("TODO ② 먼저: color_mask() 의 BGR→HSV 변환을 구현하세요.")
     if lo[0] <= hi[0]:                               # 보통 범위
         mask = cv2.inRange(hsv, lo, hi)
     else:                                            # 양끝을 감싸는 범위(빨강)
